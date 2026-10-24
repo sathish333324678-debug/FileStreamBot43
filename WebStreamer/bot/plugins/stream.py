@@ -1,18 +1,99 @@
 # (c) @AvishkarPatil
 
-import asyncio
 import urllib.parse
 
 from WebStreamer.bot import StreamBot
-from WebStreamer.utils.database import Database
-from WebStreamer.utils.human_readable import humanbytes
 from WebStreamer.vars import Var
+from WebStreamer.utils.human_readable import humanbytes
+from WebStreamer.utils.database import Database
 
-from pyrogram import filters, Client
-from pyrogram.errors import FloodWait, UserNotParticipant
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram import filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.errors import UserNotParticipant
 
 db = Database(Var.DATABASE_URL, Var.SESSION_NAME)
+
+START_TEXT = """
+<i>👋 Hᴇʏ, {}</i>
+
+<i>I'ᴍ Tᴇʟᴇɢʀᴀᴍ Fɪʟᴇ Sᴛʀᴇᴀᴍɪɴɢ Bᴏᴛ ᴀɴᴅ Dɪʀᴇᴄᴛ Lɪɴᴋ Gᴇɴᴇʀᴀᴛᴏʀ.</i>
+
+<i>Cʟɪᴄᴋ Hᴇʟᴘ ғᴏʀ ᴍᴏʀᴇ ɪɴғᴏʀᴍᴀᴛɪᴏɴ.</i>
+
+<i><u>𝗪𝗔𝗥𝗡𝗜𝗡𝗚 🚸</u></i>
+<b>Use this bot responsibly and follow Telegram's rules.</b>
+
+<i><b>🍃 Bᴏᴛ Mᴀɪɴᴛᴀɪɴᴇᴅ Bʏ:</b> @GreyMatter_bots</i>
+"""
+
+HELP_TEXT = """
+<i>- Sᴇɴᴅ ᴍᴇ ᴀɴʏ ғɪʟᴇ ᴏʀ ᴍᴇᴅɪᴀ ғʀᴏᴍ Tᴇʟᴇɢʀᴀᴍ.</i>
+<i>- I ᴡɪʟʟ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴅᴏᴡɴʟᴏᴀᴅ ᴏʀ sᴛʀᴇᴀᴍ ʟɪɴᴋ ᴡʜᴇɴ ᴄᴏɴғɪɢᴜʀᴇᴅ ᴄᴏʀʀᴇᴄᴛʟʏ.</i>
+<i>- Yᴏᴜ ᴄᴀɴ ᴀᴅᴅ ᴛʜᴇ ʙᴏᴛ ᴛᴏ ᴀ ᴄʜᴀɴɴᴇʟ ғᴏʀ ʟɪɴᴋ ʙᴜᴛᴛᴏɴs.</i>
+
+<i><b>Contact support for issues:</b>
+<a href="https://t.me/greymatters_bots_discussion">Click here</a></i>
+"""
+
+ABOUT_TEXT = """
+<b>⚜ Mʏ Nᴀᴍᴇ: FileStreamX</b>
+
+<b>🔸 Vᴇʀsɪᴏɴ: 3.0.1</b>
+<b>🔹 Sᴏᴜʀᴄᴇ: <a href="https://bit.ly/3MeXqmu">Click Here</a></b>
+<b>🔸 GɪᴛHᴜʙ: <a href="https://github.com/avipatilpro">Follow</a></b>
+<b>🔹 Dᴇᴠᴇʟᴏᴘᴇʀ: <a href="https://t.me/GreyMatter_Owner">GreyMatter_Owner</a></b>
+"""
+
+START_BUTTONS = InlineKeyboardMarkup([
+    [
+        InlineKeyboardButton("Hᴇʟᴘ", callback_data="help"),
+        InlineKeyboardButton("Aʙᴏᴜᴛ", callback_data="about"),
+        InlineKeyboardButton("Cʟᴏsᴇ", callback_data="close")
+    ]
+])
+
+HELP_BUTTONS = InlineKeyboardMarkup([
+    [
+        InlineKeyboardButton("Hᴏᴍᴇ", callback_data="home"),
+        InlineKeyboardButton("Aʙᴏᴜᴛ", callback_data="about"),
+        InlineKeyboardButton("Cʟᴏsᴇ", callback_data="close")
+    ]
+])
+
+ABOUT_BUTTONS = InlineKeyboardMarkup([
+    [
+        InlineKeyboardButton("Hᴏᴍᴇ", callback_data="home"),
+        InlineKeyboardButton("Hᴇʟᴘ", callback_data="help"),
+        InlineKeyboardButton("Cʟᴏsᴇ", callback_data="close")
+    ]
+])
+
+
+@StreamBot.on_callback_query()
+async def cb_data(bot, update):
+    if update.data == "home":
+        await update.message.edit_text(
+            text=START_TEXT.format(update.from_user.mention),
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+            reply_markup=START_BUTTONS
+        )
+    elif update.data == "help":
+        await update.message.edit_text(
+            text=HELP_TEXT,
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+            reply_markup=HELP_BUTTONS
+        )
+    elif update.data == "about":
+        await update.message.edit_text(
+            text=ABOUT_TEXT,
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+            reply_markup=ABOUT_BUTTONS
+        )
+    elif update.data == "close":
+        await update.message.delete()
 
 
 def get_media_file_size(m):
@@ -29,77 +110,124 @@ def get_media_file_name(m):
     return None
 
 
-@StreamBot.on_message(
-    filters.private & (filters.document | filters.video | filters.audio),
-    group=4
-)
-async def private_receive_handler(c: Client, m: Message):
-
-    if not await db.is_user_exist(m.from_user.id):
-        await db.add_user(m.from_user.id)
-        await c.send_message(
+@StreamBot.on_message(filters.command("start") & filters.private)
+async def start_handler(bot, message):
+    if not await db.is_user_exist(message.from_user.id):
+        await db.add_user(message.from_user.id)
+        await bot.send_message(
             Var.BIN_CHANNEL,
-            f"New User Joined:\n\n"
-            f"Name: {m.from_user.first_name}\n"
-            f"Started Your Bot!"
+            f"New user joined:\n\n"
+            f"Name: {message.from_user.first_name}\n"
+            f"User ID: {message.from_user.id}"
         )
 
-    if Var.UPDATES_CHANNEL != "None":
-        try:
-            user = await c.get_chat_member(
-                Var.UPDATES_CHANNEL,
-                m.from_user.id
-            )
+    parts = (message.text or "").split(maxsplit=1)
+    payload = parts[1] if len(parts) > 1 else ""
 
-            if user.status == "kicked":
-                await c.send_message(
-                    chat_id=m.chat.id,
-                    text=(
-                        "Sorry, you are banned from using this bot.\n\n"
-                        "Contact @greymatters_bots_discussion for help."
-                    ),
-                    disable_web_page_preview=True
+    if not payload:
+        if Var.UPDATES_CHANNEL != "None":
+            try:
+                member = await bot.get_chat_member(
+                    Var.UPDATES_CHANNEL,
+                    message.from_user.id
+                )
+                if member.status == "kicked":
+                    await message.reply_text(
+                        "Sorry, you are banned from using this bot."
+                    )
+                    return
+            except UserNotParticipant:
+                await message.reply_text(
+                    "Please join the updates channel to use this bot.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [
+                            InlineKeyboardButton(
+                                "Join channel",
+                                url=f"https://t.me/{Var.UPDATES_CHANNEL}"
+                            )
+                        ]
+                    ])
+                )
+                return
+            except Exception as e:
+                print(f"Membership check error: {e}")
+                await message.reply_text(
+                    "Could not check channel membership. Please try again later."
                 )
                 return
 
+        await message.reply_text(
+            text=START_TEXT.format(message.from_user.mention),
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+            reply_markup=START_BUTTONS
+        )
+        return
+
+    # File request payload: Moksh_b658_<message_id>
+    try:
+        message_id = int(payload.split("_")[-1])
+    except (ValueError, IndexError):
+        await message.reply_text("Invalid file link.")
+        return
+
+    if Var.UPDATES_CHANNEL != "None":
+        try:
+            member = await bot.get_chat_member(
+                Var.UPDATES_CHANNEL,
+                message.from_user.id
+            )
+            if member.status == "kicked":
+                await message.reply_text("You are not allowed to use this bot.")
+                return
         except UserNotParticipant:
-            await c.send_message(
-                chat_id=m.chat.id,
-                text="Join my updates channel to use this bot 🔐",
+            await message.reply_text(
+                "Please join the updates channel first.",
                 reply_markup=InlineKeyboardMarkup([
                     [
                         InlineKeyboardButton(
-                            "Join Now 🔓",
+                            "Join channel",
                             url=f"https://t.me/{Var.UPDATES_CHANNEL}"
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            "Try again",
+                            url=f"https://t.me/{(await bot.get_me()).username}?start={payload}"
                         )
                     ]
                 ])
             )
             return
-
         except Exception as e:
-            print(f"Channel membership check failed: {e}")
-            await c.send_message(
-                chat_id=m.chat.id,
-                text="Something went wrong. Please contact the bot owner."
-            )
+            print(f"Membership check error: {e}")
+            await message.reply_text("Could not verify channel membership.")
             return
 
     try:
-        log_msg = await m.forward(chat_id=Var.BIN_CHANNEL)
+        media_message = await bot.get_messages(
+            chat_id=Var.BIN_CHANNEL,
+            message_ids=message_id
+        )
 
-        file_name = get_media_file_name(m) or "file"
-        file_size = humanbytes(get_media_file_size(m))
+        if not media_message or not (
+            media_message.document or media_message.video or media_message.audio
+        ):
+            await message.reply_text("File not found. The link may be invalid.")
+            return
+
+        file_name = get_media_file_name(media_message) or "file"
+        file_size = humanbytes(get_media_file_size(media_message)) or "Unknown"
 
         if Var.ON_HEROKU or Var.NO_PORT:
             stream_link = (
                 f"https://{Var.FQDN}/"
-                f"{log_msg.id}/{file_name}"
+                f"{media_message.id}/{file_name}"
             )
         else:
             stream_link = (
                 f"http://{Var.FQDN}:{Var.PORT}/"
-                f"{log_msg.id}/{file_name}"
+                f"{media_message.id}/{file_name}"
             )
 
         msg_text = """
@@ -111,30 +239,11 @@ async def private_receive_handler(c: Client, m: Message):
 
 <b>📥 Download:</b> <i>{}</i>
 
-<b>🚸 Note:</b> This link may remain available while the bot and stored file are accessible.
-
 <i>© @GreyMatter_bots</i>
 """
 
-        await log_msg.reply_text(
-            text=(
-                f"**Requested by:** "
-                f"[{m.from_user.first_name}]"
-                f"(tg://user?id={m.from_user.id})\n"
-                f"**User ID:** `{m.from_user.id}`\n"
-                f"**Download Link:** {stream_link}"
-            ),
-            disable_web_page_preview=True,
-            parse_mode="Markdown",
-            quote=True
-        )
-
-        await m.reply_text(
-            text=msg_text.format(
-                file_name,
-                file_size or "Unknown",
-                stream_link
-            ),
+        await message.reply_text(
+            text=msg_text.format(file_name, file_size, stream_link),
             parse_mode="HTML",
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup([
@@ -144,76 +253,31 @@ async def private_receive_handler(c: Client, m: Message):
                         url=stream_link
                     )
                 ]
-            ]),
-            quote=True
-        )
-
-    except FloodWait as e:
-        print(f"Sleeping for {e.value} seconds")
-        await asyncio.sleep(e.value)
-
-    except Exception as e:
-        print(f"Private file handler error: {e}")
-        await c.send_message(
-            chat_id=Var.BIN_CHANNEL,
-            text=f"Private file handler error: {e}"
-        )
-
-
-@StreamBot.on_message(
-    filters.channel & (filters.document | filters.video),
-    group=-1
-)
-async def channel_receive_handler(bot: Client, broadcast: Message):
-
-    if int(broadcast.chat.id) in Var.BANNED_CHANNELS:
-        await bot.leave_chat(broadcast.chat.id)
-        return
-
-    try:
-        log_msg = await broadcast.forward(
-            chat_id=Var.BIN_CHANNEL
-        )
-
-        bot_info = await bot.get_me()
-        bot_username = bot_info.username
-
-        start_link = (
-            f"https://t.me/{bot_username}"
-            f"?start=Moksh_b658_{log_msg.id}"
-        )
-
-        await log_msg.reply_text(
-            text=(
-                f"**Channel Name:** `{broadcast.chat.title}`\n"
-                f"**Channel ID:** `{broadcast.chat.id}`\n"
-                f"**Request URL:** {start_link}"
-            ),
-            quote=True,
-            parse_mode="Markdown",
-            disable_web_page_preview=True
-        )
-
-        await bot.edit_message_reply_markup(
-            chat_id=broadcast.chat.id,
-            message_id=broadcast.id,
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton(
-                        "Download Link 📥",
-                        url=start_link
-                    )
-                ]
             ])
         )
 
-    except FloodWait as e:
-        print(f"Sleeping for {e.value} seconds")
-        await asyncio.sleep(e.value)
-
     except Exception as e:
-        print(f"Channel handler error: {e}")
-        await bot.send_message(
-            chat_id=Var.BIN_CHANNEL,
-            text=f"Channel handler error: {e}"
+        print(f"Start file handler error: {e}")
+        await message.reply_text(
+            "Unable to retrieve this file right now. Please try again later."
         )
+
+
+@StreamBot.on_message(filters.command("about") & filters.private)
+async def about_handler(bot, message):
+    await message.reply_text(
+        text=ABOUT_TEXT,
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+        reply_markup=ABOUT_BUTTONS
+    )
+
+
+@StreamBot.on_message(filters.command("help") & filters.private)
+async def help_handler(bot, message):
+    await message.reply_text(
+        text=HELP_TEXT,
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+        reply_markup=HELP_BUTTONS
+    )
