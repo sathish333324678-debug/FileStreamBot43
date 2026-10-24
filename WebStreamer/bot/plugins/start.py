@@ -213,7 +213,7 @@ async def start(bot, update):
     )
 
 
-@StreamBot.on_message(filters.command('help') & filters.private & ~filters.edited)
+@StreamBot.on_message(filters.command('help') & filters.private)
 async def help_handler(bot, message):
     if not await db.is_user_exist(message.from_user.id):
         await db.add_user(message.from_user.id)
