@@ -1,4 +1,3 @@
-
 # (c) @AvishkarPatil
 
 import asyncio
@@ -35,32 +34,30 @@ def get_media_file_name(m):
     group=4
 )
 async def private_receive_handler(c: Client, m: Message):
+
     if not await db.is_user_exist(m.from_user.id):
         await db.add_user(m.from_user.id)
         await c.send_message(
             Var.BIN_CHANNEL,
-            f"Nᴇᴡ Usᴇʀ Jᴏɪɴᴇᴅ :\n\n"
-            f"Nᴀᴍᴇ : [{m.from_user.first_name}]"
-            f"(tg://user?id={m.from_user.id}) Sᴛᴀʀᴛᴇᴅ Yᴏᴜʀ Bᴏᴛ !!"
+            f"New User Joined:\n\n"
+            f"Name: {m.from_user.first_name}\n"
+            f"Started Your Bot!"
         )
 
     if Var.UPDATES_CHANNEL != "None":
         try:
             user = await c.get_chat_member(
-                Var.UPDATES_CHANNEL, m.chat.id
+                Var.UPDATES_CHANNEL,
+                m.from_user.id
             )
 
             if user.status == "kicked":
                 await c.send_message(
                     chat_id=m.chat.id,
                     text=(
-                        "__Sᴏʀʀʏ Sɪʀ, Yᴏᴜ ᴀʀᴇ Bᴀɴɴᴇᴅ "
-                        "ᴛᴏ ᴜsᴇ ᴍᴇ.__\n\n"
-                        "**Cᴏɴᴛᴀᴄᴛ Dᴇᴠᴇʟᴏᴘᴇʀ "
-                        "@greymatters_bots_discussion Tʜᴇʏ "
-                        "Wɪʟʟ Hᴇʟᴘ Yᴏᴜ**"
+                        "Sorry, you are banned from using this bot.\n\n"
+                        "Contact @greymatters_bots_discussion for help."
                     ),
-                    parse_mode="markdown",
                     disable_web_page_preview=True
                 )
                 return
@@ -68,73 +65,64 @@ async def private_receive_handler(c: Client, m: Message):
         except UserNotParticipant:
             await c.send_message(
                 chat_id=m.chat.id,
-                text=(
-                    "<i>Jᴏɪɴ ᴍʏ ᴜᴘᴅᴀᴛᴇ ᴄʜᴀɴɴᴇʟ "
-                    "ᴛᴏ ᴜꜱᴇ ᴍᴇ 🔐</i>"
-                ),
+                text="Join my updates channel to use this bot 🔐",
                 reply_markup=InlineKeyboardMarkup([
                     [
                         InlineKeyboardButton(
-                            "Jᴏɪɴ ɴᴏᴡ 🔓",
+                            "Join Now 🔓",
                             url=f"https://t.me/{Var.UPDATES_CHANNEL}"
                         )
                     ]
-                ]),
-                parse_mode="HTML"
+                ])
             )
             return
 
-        except Exception:
+        except Exception as e:
+            print(f"Channel membership check failed: {e}")
             await c.send_message(
                 chat_id=m.chat.id,
-                text=(
-                    "**Sᴏᴍᴇᴛʜɪɴɢ ᴡᴇɴᴛ Wʀᴏɴɢ. "
-                    "Cᴏɴᴛᴀᴄᴛ ᴍʏ ʙᴏss** "
-                    "@greymatters_bots_discussion"
-                ),
-                parse_mode="markdown",
-                disable_web_page_preview=True
+                text="Something went wrong. Please contact the bot owner."
             )
             return
 
     try:
         log_msg = await m.forward(chat_id=Var.BIN_CHANNEL)
 
-        file_name = get_media_file_name(m)
+        file_name = get_media_file_name(m) or "file"
         file_size = humanbytes(get_media_file_size(m))
 
         if Var.ON_HEROKU or Var.NO_PORT:
             stream_link = (
                 f"https://{Var.FQDN}/"
-                f"{log_msg.message_id}/{file_name}"
+                f"{log_msg.id}/{file_name}"
             )
         else:
             stream_link = (
                 f"http://{Var.FQDN}:{Var.PORT}/"
-                f"{log_msg.message_id}/{file_name}"
+                f"{log_msg.id}/{file_name}"
             )
 
         msg_text = """
-<i><u>𝗬𝗼𝘂𝗿 𝗟𝗶𝗻𝗸 𝗚𝗲𝗻𝗲𝗿𝗮𝘁𝗲𝗱 !</u></i>
+<b><u>Your Link Generated!</u></b>
 
-<b>📂 Fɪʟᴇ ɴᴀᴍᴇ :</b> <i>{}</i>
+<b>📂 File Name:</b> <i>{}</i>
 
-<b>📦 Fɪʟᴇ ꜱɪᴢᴇ :</b> <i>{}</i>
+<b>📦 File Size:</b> <i>{}</i>
 
-<b>📥 Dᴏᴡɴʟᴏᴀᴅ :</b> <i>{}</i>
+<b>📥 Download:</b> <i>{}</i>
 
-<b>🚸 Nᴏᴛᴇ : Tʜɪs ᴘᴇʀᴍᴀɴᴇɴᴛ Lɪɴᴋ, Nᴏᴛ Exᴘɪʀᴇᴅ</b>
+<b>🚸 Note:</b> This link may remain available while the bot and stored file are accessible.
 
 <i>© @GreyMatter_bots</i>
 """
 
         await log_msg.reply_text(
             text=(
-                f"**RᴇQᴜᴇꜱᴛᴇᴅ ʙʏ :** "
+                f"**Requested by:** "
                 f"[{m.from_user.first_name}]"
                 f"(tg://user?id={m.from_user.id})\n"
-                f"**Uꜱᴇʀ ɪᴅ :** `{m.from_user.id}`\n"
-                f"**Dᴏᴡɴʟᴏᴀᴅ ʟɪɴᴋ :** {stream_link}"
+                f"**User ID:** `{m.from_user.id}`\n"
+                f"**Download Link:** {stream_link}"
             ),
             disable_web_page_preview=True,
             parse_mode="Markdown",
@@ -143,7 +131,7 @@ async def private_receive_handler(c: Client, m: Message):
 
         await m.reply_text(
             text=msg_text.format(
-                file_name or "Unknown",
+                file_name,
                 file_size or "Unknown",
                 stream_link
             ),
@@ -152,7 +140,7 @@ async def private_receive_handler(c: Client, m: Message):
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton(
-                        "Dᴏᴡɴʟᴏᴀᴅ ɴᴏᴡ 📥",
+                        "Download Now 📥",
                         url=stream_link
                     )
                 ]
@@ -161,18 +149,14 @@ async def private_receive_handler(c: Client, m: Message):
         )
 
     except FloodWait as e:
-        print(f"Sleeping for {e.value}s")
+        print(f"Sleeping for {e.value} seconds")
         await asyncio.sleep(e.value)
+
+    except Exception as e:
+        print(f"Private file handler error: {e}")
         await c.send_message(
             chat_id=Var.BIN_CHANNEL,
-            text=(
-                f"Gᴏᴛ FʟᴏᴏᴅWᴀɪᴛ ᴏғ {e.value}s "
-                f"from [{m.from_user.first_name}]"
-                f"(tg://user?id={m.from_user.id})\n\n"
-                f"**𝚄𝚜𝚎𝚛 𝙸𝙳 :** `{m.from_user.id}`"
-            ),
-            disable_web_page_preview=True,
-            parse_mode="Markdown"
+            text=f"Private file handler error: {e}"
         )
 
 
@@ -181,39 +165,33 @@ async def private_receive_handler(c: Client, m: Message):
     group=-1
 )
 async def channel_receive_handler(bot: Client, broadcast: Message):
+
     if int(broadcast.chat.id) in Var.BANNED_CHANNELS:
         await bot.leave_chat(broadcast.chat.id)
         return
 
     try:
-        log_msg = await broadcast.forward(chat_id=Var.BIN_CHANNEL)
+        log_msg = await broadcast.forward(
+            chat_id=Var.BIN_CHANNEL
+        )
 
-        me = await bot.get_me()
-        bot_username = me.username
-
-        if Var.ON_HEROKU or Var.NO_PORT:
-            stream_link = (
-                f"https://{Var.FQDN}/{log_msg.message_id}"
-            )
-        else:
-            stream_link = (
-                f"http://{Var.FQDN}:{Var.PORT}/"
-                f"{log_msg.message_id}"
-            )
+        bot_info = await bot.get_me()
+        bot_username = bot_info.username
 
         start_link = (
             f"https://t.me/{bot_username}"
-            f"?start=Moksh_b658_{log_msg.message_id}"
+            f"?start=Moksh_b658_{log_msg.id}"
         )
 
         await log_msg.reply_text(
             text=(
-                f"**Cʜᴀɴɴᴇʟ Nᴀᴍᴇ:** `{broadcast.chat.title}`\n"
-                f"**Cʜᴀɴɴᴇʟ ID:** `{broadcast.chat.id}`\n"
-                f"**Rᴇǫᴜᴇsᴛ ᴜʀʟ:** {start_link}"
+                f"**Channel Name:** `{broadcast.chat.title}`\n"
+                f"**Channel ID:** `{broadcast.chat.id}`\n"
+                f"**Request URL:** {start_link}"
             ),
             quote=True,
-            parse_mode="Markdown"
+            parse_mode="Markdown",
+            disable_web_page_preview=True
         )
 
         await bot.edit_message_reply_markup(
@@ -222,36 +200,20 @@ async def channel_receive_handler(bot: Client, broadcast: Message):
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton(
-                        "Dᴏᴡɴʟᴏᴀᴅ ʟɪɴᴋ 📥",
+                        "Download Link 📥",
                         url=start_link
                     )
                 ]
             ])
         )
 
-    except FloodWait as w:
-        print(f"Sleeping for {w.value}s")
-        await asyncio.sleep(w.value)
-
-        await bot.send_message(
-            chat_id=Var.BIN_CHANNEL,
-            text=(
-                f"Gᴏᴛ FʟᴏᴏᴅWᴀɪᴛ ᴏғ {w.value}s "
-                f"from {broadcast.chat.title}\n\n"
-                f"**Cʜᴀɴɴᴇʟ ID:** `{broadcast.chat.id}`"
-            ),
-            disable_web_page_preview=True,
-            parse_mode="Markdown"
-        )
+    except FloodWait as e:
+        print(f"Sleeping for {e.value} seconds")
+        await asyncio.sleep(e.value)
 
     except Exception as e:
+        print(f"Channel handler error: {e}")
         await bot.send_message(
             chat_id=Var.BIN_CHANNEL,
-            text=f"**#ᴇʀʀᴏʀ_ᴛʀᴀᴄᴇʙᴀᴄᴋ:** `{e}`",
-            disable_web_page_preview=True,
-            parse_mode="Markdown"
-        )
-        print(
-            f"Cᴀɴ'ᴛ Eᴅɪᴛ Bʀᴏᴀᴅᴄᴀsᴛ Mᴇssᴀɢᴇ!\n"
-            f"Eʀʀᴏʀ: {e}"
+            text=f"Channel handler error: {e}"
         )
