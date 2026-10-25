@@ -1,7 +1,5 @@
 Python
 
-# (c) @AvishkarPatil
-
 import urllib.parse
 from html import escape
 
