@@ -229,7 +229,7 @@ async def help_handler(bot, message):
                 await bot.send_message(
                     chat_id=message.chat.id,
                     text="<i>Sᴏʀʀʏ Sɪʀ, Yᴏᴜ ᴀʀᴇ Bᴀɴɴᴇᴅ ᴛᴏ ᴜsᴇ ᴍᴇ. Cᴏɴᴛᴀᴄᴛ ᴛʜᴇ Dᴇᴠᴇʟᴏᴘᴇʀ</i>",
-                    parse_mode="HTML",
+                    parse_mode=ParseMode.HTML
                     disable_web_page_preview=True
                 )
                 return
@@ -253,7 +253,7 @@ async def help_handler(bot, message):
                 disable_web_page_preview=True)
             return
     await message.reply_text(
-        text=HELP_TEXT,
+            text=HELP_TEXT,
             parse_mode=ParseMode.HTML
             disable_web_page_preview=True,
         reply_markup=HELP_BUTTONS
