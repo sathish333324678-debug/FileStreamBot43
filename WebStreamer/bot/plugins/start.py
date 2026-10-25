@@ -4,6 +4,7 @@ from WebStreamer.vars import Var
 from WebStreamer.utils.human_readable import humanbytes
 from WebStreamer.utils.database import Database
 from pyrogram import filters
+from pyrogram.enums import ParseMode
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import UserNotParticipant
 
@@ -137,7 +138,7 @@ async def start(b, m):
                 return
         await m.reply_text(
             text=START_TEXT.format(m.from_user.mention),
-            parse_mode="HTML",
+            parse_mode=ParseMode.HTML
             disable_web_page_preview=True,
             reply_markup=START_BUTTONS
               )                                                                         
@@ -253,8 +254,8 @@ async def help_handler(bot, message):
             return
     await message.reply_text(
         text=HELP_TEXT,
-        parse_mode="HTML",
-        disable_web_page_preview=True,
+            parse_mode=ParseMode.HTML
+            disable_web_page_preview=True,
         reply_markup=HELP_BUTTONS
         )
 
