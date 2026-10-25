@@ -133,7 +133,7 @@ async def start(b, m):
                 await b.send_message(
                     chat_id=m.chat.id,
                     text="<i>Sᴏᴍᴇᴛʜɪɴɢ ᴡʀᴏɴɢ ᴄᴏɴᴛᴀᴄᴛ ᴍʏ ᴅᴇᴠᴇʟᴏᴘᴇʀ</i> <b><a href='https://t.me/greymatters_bots_discussion'>[ ᴄʟɪᴄᴋ ʜᴇʀᴇ ]</a></b>",
-                    parse_mode=ParseMode.HTML
+                                        parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True)
                 return
         await m.reply_text(
