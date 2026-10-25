@@ -1,6 +1,9 @@
+Python
+
 # (c) @AvishkarPatil
 
 import urllib.parse
+from html import escape
 
 from WebStreamer.bot import StreamBot
 from WebStreamer.vars import Var
@@ -13,6 +16,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import UserNotParticipant
 
 db = Database(Var.DATABASE_URL, Var.SESSION_NAME)
+
 
 START_TEXT = """
 <i>👋 Hᴇʏ, {}</i>
@@ -30,7 +34,7 @@ START_TEXT = """
 HELP_TEXT = """
 <i>- Sᴇɴᴅ ᴍᴇ ᴀɴʏ ғɪʟᴇ ᴏʀ ᴍᴇᴅɪᴀ ғʀᴏᴍ Tᴇʟᴇɢʀᴀᴍ.</i>
 <i>- I ᴡɪʟʟ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴅᴏᴡɴʟᴏᴀᴅ ᴏʀ sᴛʀᴇᴀᴍ ʟɪɴᴋ ᴡʜᴇɴ ᴄᴏɴғɪɢᴜʀᴇᴅ ᴄᴏʀʀᴇᴄᴛʟʏ.</i>
-<i>- Yᴏᴜ ᴄᴀɴ ᴀᴅᴅ ᴛʜᴇ ʙᴏᴛ ᴛᴏ ᴀ ᴄʜᴀɴɴᴇʟ ғᴏʀ ʟɪɴᴋ ʙᴜᴛᴛᴏɴs.</i>
+<i>- File links require the file to be available in the configured channel.</i>
 
 <i><b>Contact support for issues:</b>
 <a href="https://t.me/greymatters_bots_discussion">Click here</a></i>
@@ -44,6 +48,7 @@ ABOUT_TEXT = """
 <b>🔸 GɪᴛHᴜʙ: <a href="https://github.com/avipatilpro">Follow</a></b>
 <b>🔹 Dᴇᴠᴇʟᴏᴘᴇʀ: <a href="https://t.me/GreyMatter_Owner">GreyMatter_Owner</a></b>
 """
+
 
 START_BUTTONS = InlineKeyboardMarkup([
     [
@@ -72,90 +77,116 @@ ABOUT_BUTTONS = InlineKeyboardMarkup([
 
 @StreamBot.on_callback_query()
 async def cb_data(bot, update):
+    await update.answer()
+
     if update.data == "home":
         await update.message.edit_text(
             text=START_TEXT.format(update.from_user.mention),
-            parse_mode="HTML",
+            parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
             reply_markup=START_BUTTONS
         )
+
     elif update.data == "help":
         await update.message.edit_text(
             text=HELP_TEXT,
-            parse_mode="HTML",
+            parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
             reply_markup=HELP_BUTTONS
         )
+
     elif update.data == "about":
         await update.message.edit_text(
             text=ABOUT_TEXT,
-            parse_mode="HTML",
+            parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
             reply_markup=ABOUT_BUTTONS
         )
+
     elif update.data == "close":
         await update.message.delete()
 
 
-def get_media_file_size(m):
-    media = m.video or m.audio or m.document
+def get_media_file_size(message):
+    media = message.video or message.audio or message.document
+
     if media and media.file_size:
         return media.file_size
+
     return None
 
 
-def get_media_file_name(m):
-    media = m.video or m.document or m.audio
+def get_media_file_name(message):
+    media = message.video or message.document or message.audio
+
     if media and media.file_name:
-        return urllib.parse.quote_plus(media.file_name)
+        return urllib.parse.quote(media.file_name, safe="")
+
     return None
+
+
+async def check_membership(bot, message):
+    if Var.UPDATES_CHANNEL == "None":
+        return True
+
+    try:
+        member = await bot.get_chat_member(
+            Var.UPDATES_CHANNEL,
+            message.from_user.id
+        )
+
+        if member.status == "kicked":
+            await message.reply_text(
+                "Sorry, you are banned from using this bot."
+            )
+            return False
+
+        return True
+
+    except UserNotParticipant:
+        await message.reply_text(
+            "Please join the updates channel to use this bot.",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton(
+                        "Join channel",
+                        url=f"https://t.me/{Var.UPDATES_CHANNEL.lstrip('@')}"
+                    )
+                ]
+            ])
+        )
+        return False
+
+    except Exception as error:
+        print(f"Membership check error: {error}")
+        await message.reply_text(
+            "Could not check channel membership. Please try again later."
+        )
+        return False
 
 
 @StreamBot.on_message(filters.command("start") & filters.private)
 async def start_handler(bot, message):
+
     if not await db.is_user_exist(message.from_user.id):
         await db.add_user(message.from_user.id)
-        await bot.send_message(
-            Var.BIN_CHANNEL,
-            f"New user joined:\n\n"
-            f"Name: {message.from_user.first_name}\n"
-            f"User ID: {message.from_user.id}"
-        )
+
+        try:
+            await bot.send_message(
+                Var.BIN_CHANNEL,
+                f"New user joined:\n\n"
+                f"Name: {message.from_user.first_name}\n"
+                f"User ID: {message.from_user.id}"
+            )
+        except Exception as error:
+            print(f"New user notification error: {error}")
 
     parts = (message.text or "").split(maxsplit=1)
     payload = parts[1] if len(parts) > 1 else ""
 
     if not payload:
-        if Var.UPDATES_CHANNEL != "None":
-            try:
-                member = await bot.get_chat_member(
-                    Var.UPDATES_CHANNEL,
-                    message.from_user.id
-                )
-                if member.status == "kicked":
-                    await message.reply_text(
-                        "Sorry, you are banned from using this bot."
-                    )
-                    return
-            except UserNotParticipant:
-                await message.reply_text(
-                    "Please join the updates channel to use this bot.",
-                    reply_markup=InlineKeyboardMarkup([
-                        [
-                            InlineKeyboardButton(
-                                "Join channel",
-                                url=f"https://t.me/{Var.UPDATES_CHANNEL}"
-                            )
-                        ]
-                    ])
-                )
-                return
-            except Exception as e:
-                print(f"Membership check error: {e}")
-                await message.reply_text(
-                    "Could not check channel membership. Please try again later."
-                )
-                return
+        if not await check_membership(bot, message):
+            return
 
         await message.reply_text(
             text=START_TEXT.format(message.from_user.mention),
@@ -165,45 +196,14 @@ async def start_handler(bot, message):
         )
         return
 
-    # File request payload: Moksh_b658_<message_id>
     try:
         message_id = int(payload.split("_")[-1])
     except (ValueError, IndexError):
         await message.reply_text("Invalid file link.")
         return
 
-    if Var.UPDATES_CHANNEL != "None":
-        try:
-            member = await bot.get_chat_member(
-                Var.UPDATES_CHANNEL,
-                message.from_user.id
-            )
-            if member.status == "kicked":
-                await message.reply_text("You are not allowed to use this bot.")
-                return
-        except UserNotParticipant:
-            await message.reply_text(
-                "Please join the updates channel first.",
-                reply_markup=InlineKeyboardMarkup([
-                    [
-                        InlineKeyboardButton(
-                            "Join channel",
-                            url=f"https://t.me/{Var.UPDATES_CHANNEL}"
-                        )
-                    ],
-                    [
-                        InlineKeyboardButton(
-                            "Try again",
-                            url=f"https://t.me/{(await bot.get_me()).username}?start={payload}"
-                        )
-                    ]
-                ])
-            )
-            return
-        except Exception as e:
-            print(f"Membership check error: {e}")
-            await message.reply_text("Could not verify channel membership.")
-            return
+    if not await check_membership(bot, message):
+        return
 
     try:
         media_message = await bot.get_messages(
@@ -212,13 +212,20 @@ async def start_handler(bot, message):
         )
 
         if not media_message or not (
-            media_message.document or media_message.video or media_message.audio
+            media_message.document
+            or media_message.video
+            or media_message.audio
         ):
-            await message.reply_text("File not found. The link may be invalid.")
+            await message.reply_text(
+                "File not found. The link may be invalid."
+            )
             return
 
-        file_name = get_media_file_name(media_message) or "file"
-        file_size = humanbytes(get_media_file_size(media_message)) or "Unknown"
+        raw_name = get_media_file_name(media_message)
+        file_name = raw_name or "file"
+        file_size = humanbytes(
+            get_media_file_size(media_message)
+        ) or "Unknown"
 
         if Var.ON_HEROKU or Var.NO_PORT:
             stream_link = (
@@ -231,21 +238,19 @@ async def start_handler(bot, message):
                 f"{media_message.id}/{file_name}"
             )
 
-        msg_text = """
-<b><u>Your Link Generated!</u></b>
-
-<b>📂 File Name:</b> <i>{}</i>
-
-<b>📦 File Size:</b> <i>{}</i>
-
-<b>📥 Download:</b> <i>{}</i>
-
-<i>© @GreyMatter_bots</i>
-"""
+        msg_text = (
+            "<b><u>Your Link Generated!</u></b>\n\n"
+            f"<b>📂 File Name:</b> <code>{escape(file_name)}</code>\n\n"
+            f"<b>📦 File Size:</b> <i>{escape(str(file_size))}</i>\n\n"
+            f"<b>📥 Download:</b>\n"
+            f"<a href=\"{escape(stream_link, quote=True)}\">"
+            "Click here to download</a>\n\n"
+            "<i>© @GreyMatter_bots</i>"
+        )
 
         await message.reply_text(
-            text=msg_text.format(file_name, file_size, stream_link),
-            parse_mode="HTML",
+            text=msg_text,
+            parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup([
                 [
@@ -257,10 +262,11 @@ async def start_handler(bot, message):
             ])
         )
 
-    except Exception as e:
-        print(f"Start file handler error: {e}")
+    except Exception as error:
+        print(f"Start file handler error: {error}")
         await message.reply_text(
-            "Unable to retrieve this file right now. Please try again later."
+            "Unable to retrieve this file right now. "
+            "Please try again later."
         )
 
 
@@ -268,7 +274,7 @@ async def start_handler(bot, message):
 async def about_handler(bot, message):
     await message.reply_text(
         text=ABOUT_TEXT,
-        parse_mode="HTML",
+        parse_mode=ParseMode.HTML,
         disable_web_page_preview=True,
         reply_markup=ABOUT_BUTTONS
     )
@@ -278,7 +284,7 @@ async def about_handler(bot, message):
 async def help_handler(bot, message):
     await message.reply_text(
         text=HELP_TEXT,
-        parse_mode="HTML",
+        parse_mode=ParseMode.HTML,
         disable_web_page_preview=True,
         reply_markup=HELP_BUTTONS
     )
