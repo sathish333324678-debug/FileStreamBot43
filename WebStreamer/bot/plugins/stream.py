@@ -7,7 +7,7 @@ from WebStreamer.vars import Var
 from WebStreamer.utils.human_readable import humanbytes
 from WebStreamer.utils.database import Database
 
-from pyrogram import filters
+from pyrogram.enums import ParseMode
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import UserNotParticipant
 
@@ -158,7 +158,7 @@ async def start_handler(bot, message):
 
         await message.reply_text(
             text=START_TEXT.format(message.from_user.mention),
-            parse_mode="HTML",
+            parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
             reply_markup=START_BUTTONS
         )
