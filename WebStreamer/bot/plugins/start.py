@@ -8,7 +8,6 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 from pyrogram.enums import ParseMode
 
 from WebStreamer.vars import Var
-from WebStreamer.bot.plugins.admin import list_users
 from WebStreamer.utils.human_readable import humanbytes
 from WebStreamer.utils.database import Database
 
@@ -118,3 +117,4 @@ async def about_handler(bot: Client, message: Message):
         parse_mode=ParseMode.HTML,
         disable_web_page_preview=True
     )
+
