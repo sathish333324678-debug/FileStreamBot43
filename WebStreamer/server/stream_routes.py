@@ -21,8 +21,8 @@ async def root_route_handler(request):
                               "Telegram_Bot": '@'+bot_details.username})
 
 
-@routes.get("/{message_id}")
-@routes.get("/{message_id}/")
+@routes.get(r"/{message_id:\d+}")
+@routes.get(r"/{message_id:\d+}/")
 @routes.get(r"/{message_id:\d+}/{name}")
 async def stream_handler(request):
     try:
