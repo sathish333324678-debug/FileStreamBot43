@@ -12,6 +12,7 @@ from pyrogram.enums import ParseMode
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import UserNotParticipant
 
+
 db = Database(Var.DATABASE_URL, Var.SESSION_NAME)
 
 
@@ -24,102 +25,58 @@ START_TEXT = """
 
 <i><u>𝗪𝗔𝗥𝗡𝗜𝗡𝗚 🚸</u></i>
 <b>Use this bot responsibly and follow Telegram's rules.</b>
-
-<i><b>🍃 Bᴏᴛ Mᴀɪɴᴛᴀɪɴᴇᴅ Bʏ:</b> @GreyMatter_bots</i>
 """
 
 HELP_TEXT = """
-<i>- Sᴇɴᴅ ᴍᴇ ᴀɴʏ ғɪʟᴇ ᴏʀ ᴍᴇᴅɪᴀ ғʀᴏᴍ Tᴇʟᴇɢʀᴀᴍ.</i>
-<i>- I ᴡɪʟʟ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴅᴏᴡɴʟᴏᴀᴅ ᴏʀ sᴛʀᴇᴀᴍ ʟɪɴᴋ ᴡʜᴇɴ ᴄᴏɴғɪɢᴜʀᴇᴅ ᴄᴏʀʀᴇᴄᴛʟʏ.</i>
-<i>- File links require the file to be available in the configured channel.</i>
-
-<i><b>Contact support for issues:</b>
-<a href="https://t.me/greymatters_bots_discussion">Click here</a></i>
+<i>- Send me a video, audio, or document privately.</i>
+<i>- I will generate Watch Online and Download links.</i>
+<i>- The configured channel and web server must be working.</i>
 """
 
 ABOUT_TEXT = """
-<b>⚜ Mʏ Nᴀᴍᴇ: FileStreamX</b>
-
-<b>🔸 Vᴇʀsɪᴏɴ: 3.0.1</b>
-<b>🔹 Sᴏᴜʀᴄᴇ: <a href="https://bit.ly/3MeXqmu">Click Here</a></b>
-<b>🔸 GɪᴛHᴜʙ: <a href="https://github.com/avipatilpro">Follow</a></b>
-<b>🔹 Dᴇᴠᴇʟᴏᴘᴇʀ: <a href="https://t.me/GreyMatter_Owner">GreyMatter_Owner</a></b>
+<b>⚜ My Name: FileStreamX</b>
+<b>🔸 Version: 3.0.1</b>
 """
 
 
 START_BUTTONS = InlineKeyboardMarkup([
     [
-        InlineKeyboardButton("Hᴇʟᴘ", callback_data="help"),
-        InlineKeyboardButton("Aʙᴏᴜᴛ", callback_data="about"),
-        InlineKeyboardButton("Cʟᴏsᴇ", callback_data="close")
+        InlineKeyboardButton("HELP", callback_data="help"),
+        InlineKeyboardButton("ABOUT", callback_data="about"),
+        InlineKeyboardButton("CLOSE", callback_data="close")
     ]
 ])
 
 HELP_BUTTONS = InlineKeyboardMarkup([
     [
-        InlineKeyboardButton("Hᴏᴍᴇ", callback_data="home"),
-        InlineKeyboardButton("Aʙᴏᴜᴛ", callback_data="about"),
-        InlineKeyboardButton("Cʟᴏsᴇ", callback_data="close")
+        InlineKeyboardButton("HOME", callback_data="home"),
+        InlineKeyboardButton("ABOUT", callback_data="about"),
+        InlineKeyboardButton("CLOSE", callback_data="close")
     ]
 ])
 
 ABOUT_BUTTONS = InlineKeyboardMarkup([
     [
-        InlineKeyboardButton("Hᴏᴍᴇ", callback_data="home"),
-        InlineKeyboardButton("Hᴇʟᴘ", callback_data="help"),
-        InlineKeyboardButton("Cʟᴏsᴇ", callback_data="close")
+        InlineKeyboardButton("HOME", callback_data="home"),
+        InlineKeyboardButton("HELP", callback_data="help"),
+        InlineKeyboardButton("CLOSE", callback_data="close")
     ]
 ])
 
 
-@StreamBot.on_callback_query()
-async def cb_data(bot, update):
-    await update.answer()
-
-    if update.data == "home":
-        await update.message.edit_text(
-            text=START_TEXT.format(update.from_user.mention),
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True,
-            reply_markup=START_BUTTONS
-        )
-
-    elif update.data == "help":
-        await update.message.edit_text(
-            text=HELP_TEXT,
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True,
-            reply_markup=HELP_BUTTONS
-        )
-
-    elif update.data == "about":
-        await update.message.edit_text(
-            text=ABOUT_TEXT,
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True,
-            reply_markup=ABOUT_BUTTONS
-        )
-
-    elif update.data == "close":
-        await update.message.delete()
-
-
-def get_media_file_size(message):
-    media = message.video or message.audio or message.document
-
-    if media and media.file_size:
-        return media.file_size
-
-    return None
+def get_media(message):
+    return message.video or message.document or message.audio
 
 
 def get_media_file_name(message):
-    media = message.video or message.document or message.audio
+    media = get_media(message)
+    return getattr(media, "file_name", None) if media else None
 
-    if media and media.file_name:
-        return urllib.parse.quote(media.file_name, safe="")
 
-    return None
+def get_base_url():
+    if Var.ON_HEROKU or Var.NO_PORT:
+        return f"https://{Var.FQDN}"
+    return f"http://{Var.FQDN}:{Var.PORT}"
 
 
 async def check_membership(bot, message):
@@ -131,157 +88,170 @@ async def check_membership(bot, message):
             Var.UPDATES_CHANNEL,
             message.from_user.id
         )
-
-        if member.status == "kicked":
-            await message.reply_text(
-                "Sorry, you are banned from using this bot."
-            )
+        if str(member.status).lower() == "kicked":
+            await message.reply_text("You cannot use this bot.")
             return False
-
         return True
 
     except UserNotParticipant:
         await message.reply_text(
-            "Please join the updates channel to use this bot.",
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton(
-                        "Join channel",
-                        url=f"https://t.me/{Var.UPDATES_CHANNEL.lstrip('@')}"
-                    )
-                ]
-            ])
+            "Please join our updates channel first.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "Join Channel",
+                    url=f"https://t.me/{Var.UPDATES_CHANNEL.lstrip('@')}"
+                )
+            ]])
         )
         return False
 
     except Exception as error:
         print(f"Membership check error: {error}")
         await message.reply_text(
-            "Could not check channel membership. Please try again later."
+            "Unable to check channel membership. Please try again."
         )
         return False
 
 
+@StreamBot.on_callback_query()
+async def cb_data(bot, update):
+    await update.answer()
+
+    if update.data == "home":
+        await update.message.edit_text(
+            START_TEXT.format(update.from_user.mention),
+            parse_mode=ParseMode.HTML,
+            reply_markup=START_BUTTONS
+        )
+    elif update.data == "help":
+        await update.message.edit_text(
+            HELP_TEXT,
+            parse_mode=ParseMode.HTML,
+            reply_markup=HELP_BUTTONS
+        )
+    elif update.data == "about":
+        await update.message.edit_text(
+            ABOUT_TEXT,
+            parse_mode=ParseMode.HTML,
+            reply_markup=ABOUT_BUTTONS
+        )
+    elif update.data == "close":
+        await update.message.delete()
+
+
 @StreamBot.on_message(filters.command("start") & filters.private)
 async def start_handler(bot, message):
-
-    if not await db.is_user_exist(message.from_user.id):
-        await db.add_user(message.from_user.id)
-
-        try:
-            await bot.send_message(
-                Var.BIN_CHANNEL,
-                f"New user joined:\n\n"
-                f"Name: {message.from_user.first_name}\n"
-                f"User ID: {message.from_user.id}"
-            )
-        except Exception as error:
-            print(f"New user notification error: {error}")
-
     parts = (message.text or "").split(maxsplit=1)
     payload = parts[1] if len(parts) > 1 else ""
 
     if not payload:
+        try:
+            if not await db.is_user_exist(message.from_user.id):
+                await db.add_user(message.from_user.id)
+        except Exception as error:
+            print(f"Database user error: {error}")
+
         if not await check_membership(bot, message):
             return
 
         await message.reply_text(
-            text=START_TEXT.format(message.from_user.mention),
+            START_TEXT.format(message.from_user.mention),
             parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True,
             reply_markup=START_BUTTONS
         )
         return
 
     try:
         message_id = int(payload.split("_")[-1])
-    except (ValueError, IndexError):
-        await message.reply_text("Invalid file link.")
-        return
-
-    if not await check_membership(bot, message):
-        return
-
-    try:
         media_message = await bot.get_messages(
-            chat_id=Var.BIN_CHANNEL,
-            message_ids=message_id
+            Var.BIN_CHANNEL, message_id
         )
 
-        if not media_message or not (
-            media_message.document
-            or media_message.video
-            or media_message.audio
-        ):
-            await message.reply_text(
-                "File not found. The link may be invalid."
-            )
+        if not media_message or not get_media(media_message):
+            await message.reply_text("File not found.")
             return
 
-        raw_name = get_media_file_name(media_message)
-        file_name = raw_name or "file"
-        file_size = humanbytes(
-            get_media_file_size(media_message)
-        ) or "Unknown"
+        if not await check_membership(bot, message):
+            return
 
-        if Var.ON_HEROKU or Var.NO_PORT:
-            stream_link = (
-                f"https://{Var.FQDN}/"
-                f"{media_message.id}/{file_name}"
-            )
-        else:
-            stream_link = (
-                f"http://{Var.FQDN}:{Var.PORT}/"
-                f"{media_message.id}/{file_name}"
-            )
+        name = get_media_file_name(media_message) or "file"
+        base_url = get_base_url()
 
-        msg_text = (
-            "<b><u>Your Link Generated!</u></b>\n\n"
-            f"<b>📂 File Name:</b> <code>{escape(file_name)}</code>\n\n"
-            f"<b>📦 File Size:</b> <i>{escape(str(file_size))}</i>\n\n"
-            f"<b>📥 Download:</b>\n"
-            f"<a href=\"{escape(stream_link, quote=True)}\">"
-            "Click here to download</a>\n\n"
-            "<i>© @GreyMatter_bots</i>"
-        )
+        watch_link = f"{base_url}/watch/{message_id}"
+        download_link = f"{base_url}/download/{message_id}"
 
         await message.reply_text(
-            text=msg_text,
+            f"<b>File:</b> <code>{escape(name)}</code>\n\n"
+            "<b>Choose an option:</b>",
             parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True,
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton(
-                        "Download Now 📥",
-                        url=stream_link
-                    )
-                ]
-            ])
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("▶️ Watch Online", url=watch_link),
+                InlineKeyboardButton("⬇️ Download", url=download_link)
+            ]])
+        )
+    except Exception as error:
+        print(f"Start file handler error: {error}")
+        await message.reply_text("Unable to generate the file links.")
+
+
+@StreamBot.on_message(
+    filters.private
+    & (filters.video | filters.document | filters.audio)
+)
+async def auto_link_handler(bot, message):
+    try:
+        media = get_media(message)
+        if not media:
+            return
+
+        if not await check_membership(bot, message):
+            return
+
+        # Copy the uploaded file into the configured storage channel.
+        saved_message = await message.copy(chat_id=Var.BIN_CHANNEL)
+
+        file_name = get_media_file_name(message) or "file"
+        file_size = (
+            humanbytes(media.file_size)
+            if media.file_size else "Unknown"
+        )
+
+        base_url = get_base_url()
+        watch_link = f"{base_url}/watch/{saved_message.id}"
+        download_link = f"{base_url}/download/{saved_message.id}"
+
+        await message.reply_text(
+            f"<b>✅ Links generated!</b>\n\n"
+            f"<b>📁 File:</b> <code>{escape(file_name)}</code>\n"
+            f"<b>📦 Size:</b> {escape(str(file_size))}\n\n"
+            "Choose an option below:",
+            parse_mode=ParseMode.HTML,
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("▶️ Watch Online", url=watch_link),
+                InlineKeyboardButton("⬇️ Download", url=download_link)
+            ]])
         )
 
     except Exception as error:
-        print(f"Start file handler error: {error}")
+        print(f"Auto link handler error: {error}")
         await message.reply_text(
-            "Unable to retrieve this file right now. "
-            "Please try again later."
+            "Link generation failed. Check the Render logs."
         )
-
-
-@StreamBot.on_message(filters.command("about") & filters.private)
-async def about_handler(bot, message):
-    await message.reply_text(
-        text=ABOUT_TEXT,
-        parse_mode=ParseMode.HTML,
-        disable_web_page_preview=True,
-        reply_markup=ABOUT_BUTTONS
-    )
 
 
 @StreamBot.on_message(filters.command("help") & filters.private)
 async def help_handler(bot, message):
     await message.reply_text(
-        text=HELP_TEXT,
+        HELP_TEXT,
         parse_mode=ParseMode.HTML,
-        disable_web_page_preview=True,
         reply_markup=HELP_BUTTONS
+    )
+
+
+@StreamBot.on_message(filters.command("about") & filters.private)
+async def about_handler(bot, message):
+    await message.reply_text(
+        ABOUT_TEXT,
+        parse_mode=ParseMode.HTML,
+        reply_markup=ABOUT_BUTTONS
     )
