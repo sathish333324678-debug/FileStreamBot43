@@ -2,8 +2,8 @@
 import sys
 import glob
 import asyncio
-import logging
 import importlib.util
+import logging
 from pathlib import Path
 from contextlib import suppress
 
@@ -37,7 +37,9 @@ async def load_plugins():
         )
 
         if spec is None or spec.loader is None:
-            raise ImportError(f"Could not load plugin: {plugin_name}")
+            raise ImportError(
+                f"Could not load plugin: {plugin_name}"
+            )
 
         module = importlib.util.module_from_spec(spec)
         sys.modules[import_path] = module
@@ -53,8 +55,6 @@ async def main():
 
     try:
         print("Loading Telegram Bot plugins...")
-
-        # IMPORTANT: Register handlers BEFORE starting the bot.
         await load_plugins()
 
         print("Starting Telegram Bot...")
@@ -64,11 +64,17 @@ async def main():
         me = await StreamBot.get_me()
         print(f"Bot started: @{me.username or me.first_name}")
 
+        print("Starting Web Server...")
         app = await web_server()
+
         app_runner = web.AppRunner(app)
         await app_runner.setup()
 
-        site = web.TCPSite(app_runner, "0.0.0.0", Var.PORT)
+        site = web.TCPSite(
+            app_runner,
+            "0.0.0.0",
+            Var.PORT
+        )
         await site.start()
 
         print(f"Web server running on port {Var.PORT}")
@@ -108,4 +114,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("Service stopped by user.")
+        print("Service stopped.")
