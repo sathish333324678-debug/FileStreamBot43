@@ -1,4 +1,3 @@
-
 # (c) @AvishkarPatil | @EverythingSuckz
 
 from os import getenv, environ
@@ -20,6 +19,7 @@ class Var(object):
     BIN_CHANNEL = int(getenv("BIN_CHANNEL"))
 
     PORT = int(getenv("PORT", "8080"))
+
     BIND_ADRESS = str(
         getenv("WEB_SERVER_BIND_ADDRESS", "0.0.0.0")
     )
@@ -41,13 +41,16 @@ class Var(object):
 
     # Render website URL
     FQDN = "filestreambot43.onrender.com"
-    URL = "https://filestreambot43.onrender.com"
+    URL = "https://filestreambot43.onrender.com/"
 
     DATABASE_URL = str(getenv("DATABASE_URL"))
 
     PING_INTERVAL = int(getenv("PING_INTERVAL", "500"))
 
-    UPDATES_CHANNEL = str(getenv("UPDATES_CHANNEL", "None"))
+    # Updates channel: handle unset value correctly
+    UPDATES_CHANNEL = getenv("UPDATES_CHANNEL", "None")
+    if UPDATES_CHANNEL == "None" or not UPDATES_CHANNEL.strip():
+        UPDATES_CHANNEL = None
 
     BANNED_CHANNELS = list(
         set(
