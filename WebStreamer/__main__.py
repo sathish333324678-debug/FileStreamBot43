@@ -54,17 +54,20 @@ async def main():
     bot_started = False
 
     try:
-        print("Loading Telegram Bot plugins...")
+        logging.info("Loading Telegram Bot plugins...")
         await load_plugins()
 
-        print("Starting Telegram Bot...")
+        logging.info("Starting Telegram Bot...")
         await StreamBot.start()
         bot_started = True
 
         me = await StreamBot.get_me()
-        print(f"Bot started: @{me.username or me.first_name}")
+        logging.info(
+            "Bot started successfully: @%s",
+            me.username or me.first_name
+        )
 
-        print("Starting Web Server...")
+        logging.info("Starting Web Server...")
         app = await web_server()
 
         app_runner = web.AppRunner(app)
@@ -77,22 +80,27 @@ async def main():
         )
         await site.start()
 
-        print(f"Web server running on port {Var.PORT}")
-        print("Service Started Successfully.")
+        logging.info(
+            "Web server running on port %s",
+            Var.PORT
+        )
+        logging.info("Service Started Successfully.")
 
         if Var.ON_HEROKU:
             ping_task = asyncio.create_task(ping_server())
 
+        # Keep the Telegram bot running until shutdown.
         await idle()
 
     except asyncio.CancelledError:
+        logging.info("Service cancellation received.")
         raise
 
     except Exception:
         logging.exception("Service failed")
 
     finally:
-        print("Stopping services...")
+        logging.info("Stopping services...")
 
         if ping_task is not None:
             ping_task.cancel()
@@ -107,11 +115,11 @@ async def main():
             with suppress(Exception):
                 await StreamBot.stop()
 
-        print("Service shutdown completed.")
+        logging.info("Service shutdown completed.")
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("Service stopped.")
+        logging.info("Service stopped by keyboard interrupt.")
