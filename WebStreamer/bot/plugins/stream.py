@@ -18,7 +18,6 @@ db = Database(Var.DATABASE_URL, Var.SESSION_NAME)
 
 START_TEXT = """
 <i>👋 Hᴇʏ, {}</i>
-
 <i>I'ᴍ Tᴇʟᴇɢʀᴀᴍ Fɪʟᴇ Sᴛʀᴇᴀᴍɪɴɢ Bᴏᴛ ᴀɴᴅ Dɪʀᴇᴄᴛ Lɪɴᴋ Gᴇɴᴇʀᴀᴛᴏʀ.</i>
 
 <i>Cʟɪᴄᴋ Hᴇʟᴘ ғᴏʀ ᴍᴏʀᴇ ɪɴғᴏʀᴍᴀᴛɪᴏɴ.</i>
@@ -37,7 +36,6 @@ ABOUT_TEXT = """
 <b>⚜ My Name: FileStreamX</b>
 <b>🔸 Version: 3.0.1</b>
 """
-
 
 START_BUTTONS = InlineKeyboardMarkup([
     [
@@ -73,14 +71,13 @@ def get_media_file_name(message):
     return getattr(media, "file_name", None) if media else None
 
 
+# Render's public HTTPS URL; do not append port 8080.
 def get_base_url():
-    if Var.ON_HEROKU or Var.NO_PORT:
-        return f"https://{Var.FQDN}"
-    return f"http://{Var.FQDN}:{Var.PORT}"
+    return "https://filestreambot43.onrender.com"
 
 
 async def check_membership(bot, message):
-    if Var.UPDATES_CHANNEL == "None":
+    if not Var.UPDATES_CHANNEL or Var.UPDATES_CHANNEL == "None":
         return True
 
     try:
@@ -88,9 +85,11 @@ async def check_membership(bot, message):
             Var.UPDATES_CHANNEL,
             message.from_user.id
         )
+
         if str(member.status).lower() == "kicked":
             await message.reply_text("You cannot use this bot.")
             return False
+
         return True
 
     except UserNotParticipant:
@@ -123,18 +122,21 @@ async def cb_data(bot, update):
             parse_mode=ParseMode.HTML,
             reply_markup=START_BUTTONS
         )
+
     elif update.data == "help":
         await update.message.edit_text(
             HELP_TEXT,
             parse_mode=ParseMode.HTML,
             reply_markup=HELP_BUTTONS
         )
+
     elif update.data == "about":
         await update.message.edit_text(
             ABOUT_TEXT,
             parse_mode=ParseMode.HTML,
             reply_markup=ABOUT_BUTTONS
         )
+
     elif update.data == "close":
         await update.message.delete()
 
@@ -163,8 +165,10 @@ async def start_handler(bot, message):
 
     try:
         message_id = int(payload.split("_")[-1])
+
         media_message = await bot.get_messages(
-            Var.BIN_CHANNEL, message_id
+            Var.BIN_CHANNEL,
+            message_id
         )
 
         if not media_message or not get_media(media_message):
@@ -185,10 +189,17 @@ async def start_handler(bot, message):
             "<b>Choose an option:</b>",
             parse_mode=ParseMode.HTML,
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("▶️ Watch Online", url=watch_link),
-                InlineKeyboardButton("⬇️ Download", url=download_link)
+                InlineKeyboardButton(
+                    "▶️ Watch Online",
+                    url=watch_link
+                ),
+                InlineKeyboardButton(
+                    "⬇️ Download",
+                    url=download_link
+                )
             ]])
         )
+
     except Exception as error:
         print(f"Start file handler error: {error}")
         await message.reply_text("Unable to generate the file links.")
@@ -201,22 +212,28 @@ async def start_handler(bot, message):
 async def auto_link_handler(bot, message):
     try:
         media = get_media(message)
+
         if not media:
             return
 
         if not await check_membership(bot, message):
             return
 
-        # Copy the uploaded file into the configured storage channel.
-        saved_message = await message.copy(chat_id=Var.BIN_CHANNEL)
+        # Save a copy in the configured Telegram storage channel.
+        saved_message = await message.copy(
+            chat_id=Var.BIN_CHANNEL
+        )
 
         file_name = get_media_file_name(message) or "file"
+
         file_size = (
             humanbytes(media.file_size)
-            if media.file_size else "Unknown"
+            if media.file_size
+            else "Unknown"
         )
 
         base_url = get_base_url()
+
         watch_link = f"{base_url}/watch/{saved_message.id}"
         download_link = f"{base_url}/download/{saved_message.id}"
 
@@ -227,13 +244,20 @@ async def auto_link_handler(bot, message):
             "Choose an option below:",
             parse_mode=ParseMode.HTML,
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("▶️ Watch Online", url=watch_link),
-                InlineKeyboardButton("⬇️ Download", url=download_link)
+                InlineKeyboardButton(
+                    "▶️ Watch Online",
+                    url=watch_link
+                ),
+                InlineKeyboardButton(
+                    "⬇️ Download",
+                    url=download_link
+                )
             ]])
         )
 
     except Exception as error:
         print(f"Auto link handler error: {error}")
+
         await message.reply_text(
             "Link generation failed. Check the Render logs."
         )
