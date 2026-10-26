@@ -2,9 +2,8 @@
 import sys
 import glob
 import asyncio
-import importlib
-import importlib.util
 import logging
+import importlib.util
 from pathlib import Path
 from contextlib import suppress
 
@@ -16,19 +15,21 @@ from .vars import Var
 from .server import web_server
 from .utils.keepalive import ping_server
 
-
 logging.basicConfig(level=logging.INFO)
 
 PLUGIN_PATH = "WebStreamer/bot/plugins/*.py"
 
 
 async def load_plugins():
-    files = glob.glob(PLUGIN_PATH)
+    files = sorted(glob.glob(PLUGIN_PATH))
+
+    if not files:
+        logging.warning("No plugins found at %s", PLUGIN_PATH)
+        return
 
     for filename in files:
         path = Path(filename)
         plugin_name = path.stem
-
         import_path = f"WebStreamer.bot.plugins.{plugin_name}"
 
         spec = importlib.util.spec_from_file_location(
@@ -36,15 +37,13 @@ async def load_plugins():
         )
 
         if spec is None or spec.loader is None:
-            raise ImportError(
-                f"Could not load plugin: {plugin_name}"
-            )
+            raise ImportError(f"Could not load plugin: {plugin_name}")
 
         module = importlib.util.module_from_spec(spec)
         sys.modules[import_path] = module
         spec.loader.exec_module(module)
 
-        logging.info("Imported plugin: %s", plugin_name)
+        logging.info("Plugin loaded: %s", plugin_name)
 
 
 async def main():
@@ -53,40 +52,30 @@ async def main():
     bot_started = False
 
     try:
-        print("Initializing Telegram Bot...")
+        print("Loading Telegram Bot plugins...")
 
+        # IMPORTANT: Register handlers BEFORE starting the bot.
+        await load_plugins()
+
+        print("Starting Telegram Bot...")
         await StreamBot.start()
         bot_started = True
 
-        print("Telegram Bot started successfully.")
-
-        await load_plugins()
-
-        print("Initializing Web Server...")
+        me = await StreamBot.get_me()
+        print(f"Bot started: @{me.username or me.first_name}")
 
         app = await web_server()
         app_runner = web.AppRunner(app)
-
         await app_runner.setup()
 
-        site = web.TCPSite(
-            app_runner,
-            "0.0.0.0",
-            Var.PORT
-        )
+        site = web.TCPSite(app_runner, "0.0.0.0", Var.PORT)
         await site.start()
 
-        print(f"Web Server started on port {Var.PORT}")
-        print(
-            "Bot => {}".format(
-                (await StreamBot.get_me()).first_name
-            )
-        )
+        print(f"Web server running on port {Var.PORT}")
+        print("Service Started Successfully.")
 
         if Var.ON_HEROKU:
             ping_task = asyncio.create_task(ping_server())
-
-        print("Service Started Successfully.")
 
         await idle()
 
