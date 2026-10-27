@@ -17,8 +17,6 @@ StreamBot = Client(
 )
 
 
-# Diagnostic handler:
-# Checks whether private Telegram messages reach the bot.
 @StreamBot.on_message(filters.private, group=999)
 async def debug_private_messages(client, message):
     logger.info(
@@ -28,4 +26,3 @@ async def debug_private_messages(client, message):
         message.text,
         bool(message.media),
     )
-# This file is a part of AvishkarPatil/FileStreamBot
