@@ -23,7 +23,24 @@ logger = logging.getLogger(__name__)
 db = Database(Var.DATABASE_URL, Var.SESSION_NAME)
 
 
-@StreamBot.on_message(filters.command("start") & filters.private)
+# DEBUG: Check whether private Telegram messages reach the bot.
+@StreamBot.on_message(filters.private, group=99)
+async def debug_private_messages(client, message: Message):
+    try:
+        logger.info(
+            "DEBUG: Private message received. User=%s, Text=%r",
+            message.from_user.id if message.from_user else "unknown",
+            message.text
+        )
+    except Exception:
+        logger.exception("Private message debug handler failed")
+
+
+# START command
+@StreamBot.on_message(
+    filters.command("start") & filters.private,
+    group=0
+)
 async def start_handler(bot: StreamBot, message: Message):
     try:
         logger.info(
@@ -32,9 +49,10 @@ async def start_handler(bot: StreamBot, message: Message):
         )
 
         if not message.from_user:
+            logger.warning("START message has no sender")
             return
 
-        # Register user; continue even if MongoDB registration fails.
+        # Register user in MongoDB; continue if registration fails.
         try:
             if not await db.is_user_exist(message.from_user.id):
                 await db.add_user(message.from_user.id)
@@ -55,16 +73,21 @@ async def start_handler(bot: StreamBot, message: Message):
                         message.from_user.id
                     )
 
-                    if str(member.status).lower().split(".")[-1] == "kicked":
+                    status = str(member.status).lower().split(".")[-1]
+
+                    if status == "kicked":
                         await message.reply_text(
-                            "You are banned from using this bot. Contact support."
+                            "You are banned from using this bot. "
+                            "Contact support."
                         )
                         return
 
                 except Exception:
-                    logger.exception("Updates channel membership check failed")
+                    logger.exception(
+                        "Updates channel membership check failed"
+                    )
                     await message.reply_text(
-                        "I couldn't verify your Updates Channel membership. "
+                        "I couldn't verify the Updates Channel membership. "
                         "Please contact the bot owner."
                     )
                     return
@@ -89,26 +112,38 @@ async def start_handler(bot: StreamBot, message: Message):
                 text=text,
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("Help", callback_data="help"),
-                        InlineKeyboardButton("About", callback_data="about")
+                        InlineKeyboardButton(
+                            "Help",
+                            callback_data="help"
+                        ),
+                        InlineKeyboardButton(
+                            "About",
+                            callback_data="about"
+                        )
                     ],
                     [
                         InlineKeyboardButton(
                             "Source Code",
-                            url="https://github.com/sathish333324678-debug/FileStreamBot43"
+                            url=(
+                                "https://github.com/"
+                                "sathish333324678-debug/FileStreamBot43"
+                            )
                         )
                     ]
                 ]),
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
+            logger.info("START reply sent successfully")
             return
 
         # Deep link: /start FILE_ID
         try:
             file_id = int(command_arg)
         except ValueError:
-            await message.reply_text("Invalid start command or file ID.")
+            await message.reply_text(
+                "Invalid start command or file ID."
+            )
             return
 
         try:
@@ -116,7 +151,8 @@ async def start_handler(bot: StreamBot, message: Message):
         except Exception:
             logger.exception("MongoDB file lookup failed")
             await message.reply_text(
-                "Unable to retrieve this file right now. Please try again later."
+                "Unable to retrieve this file right now. "
+                "Please try again later."
             )
             return
 
@@ -138,13 +174,21 @@ async def start_handler(bot: StreamBot, message: Message):
             ),
             reply_markup=InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("Fast Download", url=download_link),
-                    InlineKeyboardButton("Watch Online", url=stream_link)
+                    InlineKeyboardButton(
+                        "Fast Download",
+                        url=download_link
+                    ),
+                    InlineKeyboardButton(
+                        "Watch Online",
+                        url=stream_link
+                    )
                 ]
             ]),
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
+
+        logger.info("File information reply sent for file_id=%s", file_id)
 
     except Exception:
         logger.exception("Error inside start_handler")
@@ -156,39 +200,63 @@ async def start_handler(bot: StreamBot, message: Message):
             logger.exception("Could not send error reply")
 
 
-@StreamBot.on_message(filters.command("help") & filters.private)
+# HELP command
+@StreamBot.on_message(
+    filters.command("help") & filters.private,
+    group=0
+)
 async def help_handler(bot: StreamBot, message: Message):
     try:
+        logger.info("HELP command received")
+
         help_text = getattr(
             Var,
             "HELP_TEXT",
             "Send /start to begin using this bot."
         )
+
         await message.reply_text(
             text=help_text,
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
+
     except Exception:
         logger.exception("Error inside help_handler")
         try:
-            await message.reply_text("Unable to display help right now.")
+            await message.reply_text(
+                "Unable to display help right now."
+            )
         except Exception:
             logger.exception("Could not send help reply")
 
 
-@StreamBot.on_message(filters.command("about") & filters.private)
+# ABOUT command
+@StreamBot.on_message(
+    filters.command("about") & filters.private,
+    group=0
+)
 async def about_handler(bot: StreamBot, message: Message):
     try:
-        about_text = getattr(Var, "ABOUT_TEXT", "FileStreamBot43")
+        logger.info("ABOUT command received")
+
+        about_text = getattr(
+            Var,
+            "ABOUT_TEXT",
+            "FileStreamBot43"
+        )
+
         await message.reply_text(
             text=about_text,
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
+
     except Exception:
         logger.exception("Error inside about_handler")
         try:
-            await message.reply_text("Unable to display information right now.")
+            await message.reply_text(
+                "Unable to display information right now."
+            )
         except Exception:
             logger.exception("Could not send about reply")
